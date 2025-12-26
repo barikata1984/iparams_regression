@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package format="2">
+    <name>iparams_regression</name>
+    <version>0.1.0</version>
+    <description>
+    Inertial parameter estimation using regressor matrix approach.
+    Based on "On-line estimation of inertial parameters using a recursive total least-squares approach"
+    </description>
+
+    <maintainer email="user@example.com">User</maintainer>
+    <license>MIT</license>
+
+    <buildtool_depend>catkin</buildtool_depend>
+
+    <build_depend>rospy</build_depend>
+    <build_depend>std_msgs</build_depend>
+    <build_depend>geometry_msgs</build_depend>
+
+    <exec_depend>rospy</exec_depend>
+    <exec_depend>std_msgs</exec_depend>
+    <exec_depend>geometry_msgs</exec_depend>
+    <exec_depend>python3-numpy</exec_depend>
+    <exec_depend>python3-scipy</exec_depend>
+
+    <export>
+    </export>
+</package>

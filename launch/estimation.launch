@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 
+    Inertial Parameter Estimation Pipeline
+    
+    This launch file starts:
+    1. regressor_node: Computes regressor matrix from joint_states and wrench
+    2. estimator_node: Estimates inertial parameters using ROLS or RTLS
+    -->
+
+    <!-- Arguments -->
+    <arg name="method" default="tls" doc="Estimation method: 'ols' or 'tls'"/>
+    <arg name="forgetting_factor" default="0.99" doc="Forgetting factor for recursive estimation"/>
+    <arg name="cutoff_freq" default="10.0" doc="Cutoff frequency for numerical differentiation"/>
+
+    <!-- Regressor Matrix Node -->
+    <node name="regressor_matrix_node" pkg="iparams_regression" type="regressor_node.py" output="screen">
+        <!-- Topic parameters -->
+        <param name="joint_states_topic" value="/joint_states"/>
+        <param name="wrench_topic" value="/wrench/filtered"/>
+
+        <!-- Robot configuration -->
+        <param name="base_link" value="base_link"/>
+        <param name="ee_link" value="tool0"/>
+
+        <!-- Filter parameters -->
+        <param name="cutoff_freq" value="$(arg cutoff_freq)"/>
+    </node>
+
+    <!-- Inertial Parameter Estimator Node -->
+    <node name="inertial_estimator_node" pkg="iparams_regression" type="estimator_node.py" output="screen">
+        <!-- Estimation method -->
+        <param name="method" value="$(arg method)"/>
+        <param name="forgetting_factor" value="$(arg forgetting_factor)"/>
+
+        <!-- Topic parameters -->
+        <param name="regressor_topic" value="/regressor_matrix_node/regressor_matrix"/>
+        <param name="wrench_topic" value="/regressor_matrix_node/wrench"/>
+    </node>
+</launch>

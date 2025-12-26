@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Regressor Matrix Node -->
+    <node name="regressor_matrix_node" pkg="iparams_regression" type="regressor_node.py" output="screen">
+        <!-- Topic parameters -->
+        <param name="joint_states_topic" value="/joint_states"/>
+        <param name="wrench_topic" value="/wrench/filtered"/>
+
+        <!-- Robot configuration -->
+        <param name="base_link" value="base_link"/>
+        <param name="ee_link" value="tool0"/>
+
+        <!-- Filter parameters -->
+        <param name="cutoff_freq" value="10.0"/>
+    </node>
+</launch>
