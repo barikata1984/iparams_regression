@@ -22,15 +22,18 @@ Publishes:
 import rospy
 import numpy as np
 import tf2_ros
-from sensor_msgs.msg import JointState
 from geometry_msgs.msg import WrenchStamped
+
+from scipy import constants
+from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray, MultiArrayDimension
 
 from iparams_regression.dynamics_utils import (
     get_regressor_matrix,
     convert_twist_world_to_body,
+    compute_body_twist_and_derivative,
 )
-from iparams_regression.regressor_matrix import NumericalDifferentiator
+from iparams_regression.numerical_differentiator import NumericalDifferentiator
 
 # Import ur_pykdl for kinematics
 try:
@@ -84,8 +87,9 @@ class RegressorMatrixNode:
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
 
         # Numerical differentiators for acceleration computation
-        self.omega_diff = NumericalDifferentiator(cutoff_freq=self.cutoff_freq)
-        self.v_diff = NumericalDifferentiator(cutoff_freq=self.cutoff_freq)
+        # self.omega_diff = NumericalDifferentiator(cutoff_freq=self.cutoff_freq)
+        # self.v_diff = NumericalDifferentiator(cutoff_freq=self.cutoff_freq)
+        self.t_diff = NumericalDifferentiator(cutoff_freq=self.cutoff_freq)
 
         # State storage
         self.last_wrench_msg = None
@@ -152,44 +156,25 @@ class RegressorMatrixNode:
         # Current timestamp
         t = msg.header.stamp.to_sec()
 
-        # 1. Compute Twist in World Frame (Reference Point: Tool0)
-        # Returns [vx, vy, vz, wx, wy, wz]
-        twist_w = self.kin.forward_velocity(joint_positions, joint_velocities)
-        v_w = np.array(twist_w[:3])
-        omega_w = np.array(twist_w[3:])
-
-        # 2. Compute Acceleration in World Frame (Numerical Differentiation)
-        alpha_w = self.omega_diff.update(omega_w, t)  # Angular accel
-        a_w = self.v_diff.update(v_w, t)  # Linear accel
-
-        # 3. Get Rotation Matrix (World to Body)
-        # FK returns 4x4 Homogeneous matrix.
-        pose_homog = self.kin.forward_position_kinematics(joint_positions)
-
-        from scipy.spatial.transform import Rotation
-
-        quat = pose_homog[3:]  # [qx, qy, qz, qw]
-        R_wb = Rotation.from_quat(quat).as_matrix()  # Rotation from Body to World
-
-        # 4. Convert Twist and Acceleration to Body Frame
-        # Prepare 6D vectors [v, w]
-        twist_w_vec = np.concatenate([v_w, omega_w])
-        dtwist_w_vec = np.concatenate([a_w, alpha_w])
-
-        twist_b = convert_twist_world_to_body(twist_w_vec, R_wb)
-
-        # 5. Gravity Compensation and Acceleration
-        # Ideally, dtwist_b should include the "proper acceleration" (gravity effect).
-        # We model gravity as an upward acceleration of the base frame.
-        # g_w = [0, 0, 9.81] (Upwards)
-        g_w = np.array([0, 0, 9.81])
-        dtwist_w_vec[:3] += g_w
-
-        dtwist_b = convert_twist_world_to_body(dtwist_w_vec, R_wb)
+        # 1. Compute Twist and DTwist in Body Frame (using logic moved to dynamics_utils)
+        tw_tool0_tool0, dtw_tool0_tool0 = compute_body_twist_and_derivative(
+            self.kin, self.t_diff, joint_positions, joint_velocities, t
+        )
 
         # 6. Compute Regressor
         # dynamics_utils.get_regressor_matrix expects [v, w] order for input.
-        A = get_regressor_matrix(twist_b, dtwist_b)
+        A = get_regressor_matrix(tw_tool0_tool0, dtw_tool0_tool0)
+
+        ## DEBUG: Log values at 1Hz
+        # rospy.loginfo_throttle(
+        #    1.0,
+        #    f"\n[DEBUG] Regressor Node Status:\n"
+        #    f"  Twist Body: {tw_tool0_tool0}\n"
+        #    f"  DTwist Body: {dtw_tool0_tool0}\n"
+        #    f"  A (Reg Matrix) Sample Row 0: {A[0]}\n"
+        #    f"  A has NaN: {np.isnan(A).any()}\n"
+        #    f"  A has Inf: {np.isinf(A).any()}\n",
+        # )
 
         # Publish regressor matrix
         self.publish_regressor_matrix(A, msg.header)

@@ -46,6 +46,7 @@ class RecursiveTLS:
         n_params: int,
         forgetting_factor: float = 1.0,
         regularization: float = 1e-8,
+        deadzone: float = 0.1,
     ):
         """
         Initialize the RTLS estimator.
@@ -62,7 +63,9 @@ class RecursiveTLS:
 
         self.n_params = n_params
         self.forgetting_factor = forgetting_factor
+        self.forgetting_factor = forgetting_factor
         self.regularization = regularization
+        self.deadzone = deadzone
 
         # Dimension of augmented vector [a, y]
         self.aug_dim = n_params + 1
@@ -121,6 +124,12 @@ class RecursiveTLS:
         a = np.asarray(a).flatten()
         if len(a) != self.n_params:
             raise ValueError(f"Regressor vector must have {self.n_params} elements")
+
+        # Conditional Update: Check for sufficient excitation
+        # If the regressor vector is too small (e.g. robot is not moving),
+        # skip the update to prevent covariance decay (TLS) or wind-up (OLS).
+        if np.linalg.norm(a) < self.deadzone:
+            return self.x.copy()
 
         λ = self.forgetting_factor
 

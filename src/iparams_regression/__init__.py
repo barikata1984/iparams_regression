@@ -9,23 +9,15 @@ This package provides:
 - High-level InertialParameterEstimator interface
 """
 
-from .regressor_matrix import (
-    compute_regressor_matrix,
-    compute_gravity_in_sensor_frame,
+from .numerical_differentiator import (
     NumericalDifferentiator,
 )
 from .recursive_ols import RecursiveOLS, solve_ols_batch
 from .recursive_tls import RecursiveTLS, solve_tls_batch
-from .inertial_estimator import (
-    InertialParameters,
-    InertialParameterEstimator,
-    estimate_inertial_parameters_batch,
-)
+from .inertial_parameters import InertialParameters
 
 __all__ = [
     # Regressor matrix
-    "compute_regressor_matrix",
-    "compute_gravity_in_sensor_frame",
     "NumericalDifferentiator",
     # OLS
     "RecursiveOLS",
@@ -35,6 +27,4 @@ __all__ = [
     "solve_tls_batch",
     # High-level estimator
     "InertialParameters",
-    "InertialParameterEstimator",
-    "estimate_inertial_parameters_batch",
 ]

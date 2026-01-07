@@ -35,6 +35,7 @@ class RecursiveOLS:
         n_params: int,
         forgetting_factor: float = 1.0,
         initial_covariance: float = 1e6,
+        deadzone: float = 0.1,
     ):
         """
         Initialize the RLS estimator.
@@ -52,6 +53,7 @@ class RecursiveOLS:
 
         self.n_params = n_params
         self.forgetting_factor = forgetting_factor
+        self.deadzone = deadzone
 
         # Initialize covariance matrix P = δI (large initial uncertainty)
         self.P = initial_covariance * np.eye(n_params)
@@ -76,6 +78,10 @@ class RecursiveOLS:
         a = np.asarray(a).flatten()
         if len(a) != self.n_params:
             raise ValueError(f"Regressor vector must have {self.n_params} elements")
+
+        # Conditional Update: Check for sufficient excitation
+        if np.linalg.norm(a) < self.deadzone:
+            return self.x.copy()
 
         λ = self.forgetting_factor
 

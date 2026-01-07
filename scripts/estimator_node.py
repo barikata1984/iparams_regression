@@ -45,6 +45,7 @@ class InertialEstimatorNode:
         # Parameters
         self.method = rospy.get_param("~method", "tls")  # "ols" or "tls"
         self.forgetting_factor = rospy.get_param("~forgetting_factor", 0.99)
+        self.deadzone = rospy.get_param("~deadzone", 0.1)
         self.regressor_topic = rospy.get_param(
             "~regressor_topic", "/regressor_matrix_node/regressor_matrix"
         )
@@ -58,11 +59,13 @@ class InertialEstimatorNode:
             self.estimator = RecursiveOLS(
                 n_params=self.n_params,
                 forgetting_factor=self.forgetting_factor,
+                deadzone=self.deadzone,
             )
         else:
             self.estimator = RecursiveTLS(
                 n_params=self.n_params,
                 forgetting_factor=self.forgetting_factor,
+                deadzone=self.deadzone,
             )
 
         # State storage
@@ -88,6 +91,7 @@ class InertialEstimatorNode:
         rospy.loginfo("Inertial Estimator Node initialized")
         rospy.loginfo(f"  Method: {self.method}")
         rospy.loginfo(f"  Forgetting factor: {self.forgetting_factor}")
+        rospy.loginfo(f"  Deadzone: {self.deadzone}")
         rospy.loginfo(f"  Regressor topic: {self.regressor_topic}")
         rospy.loginfo(f"  Wrench topic: {self.wrench_topic}")
 
